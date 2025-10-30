@@ -7,7 +7,7 @@ TEMPLATE_FILE = Path("animals_template.html")
 OUTPUT_FILE = Path("animals.html")
 
 
-API_KEY = os.getenv("VPUvpAr617EhhIX/iecDkA==3iQ94zZvNMuWtm2z")
+API_KEY = os.getenv("ANIMALS_API_KEY")
 BASE_URL = "https://api.api-ninjas.com/v1/animals"
 
 
