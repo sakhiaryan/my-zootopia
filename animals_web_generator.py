@@ -1,82 +1,77 @@
 import json
+import requests
+import os
 from pathlib import Path
 
-DATA_FILE = Path("animals_data.json")
 TEMPLATE_FILE = Path("animals_template.html")
 OUTPUT_FILE = Path("animals.html")
 
 
-def load_data(file_path):
-    """Loads JSON data from a file."""
-    with open(file_path, "r", encoding="utf-8") as f:
-        return json.load(f)
+API_KEY = os.getenv("VPUvpAr617EhhIX/iecDkA==3iQ94zZvNMuWtm2z")
+BASE_URL = "https://api.api-ninjas.com/v1/animals"
 
 
-def html_escape(text):
-    """Escape text for HTML (keep our tags intact by only escaping values)."""
-    return (
-        str(text)
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-        .replace("'", "&#39;")
-    )
+def fetch_animals(animal_name):
+    """Fetch animal data from the API."""
+    url = f"{BASE_URL}?name={animal_name}"
+    headers = {"X-Api-Key": API_KEY}
+    response = requests.get(url, headers=headers)
+    print("Status Code:", response.status_code)
+    if response.status_code == 200:
+        data = response.json()
+        return data
+    else:
+        print("Error:", response.text)
+        return []
 
 
-def build_animals_html(animals):
-    """
-    Build <li class="cards__item">…</li> blocks.
-    Only include fields if present:
-      - Name
-      - Diet   (characteristics.diet)
-      - Location (first of locations)
-      - Type   (characteristics.type)
-    """
+def build_animals_html(animals, animal_name):
+    """Build HTML for all animals or show error if empty."""
+    if not animals:
+        return f'<h2>The animal "{animal_name}" doesn\'t exist.</h2>'
+
     items = []
-
     for a in animals:
-        lines = []
+        name = a.get("name", "Unknown")
+        characteristics = a.get("characteristics", {})
+        diet = characteristics.get("diet", "Unknown")
+        location = a.get("locations", [])
+        type_ = characteristics.get("type", "Unknown")
 
-        name = a.get("name")
-        if name:
-            lines.append(f"Name: {html_escape(name)}<br/>")
+        locations = ", ".join(location) if isinstance(location, list) else location
 
-        characteristics = a.get("characteristics", {}) or {}
-        diet = characteristics.get("diet")
-        if diet:
-            lines.append(f"Diet: {html_escape(diet)}<br/>")
-
-        locations = a.get("locations") or []
-        if isinstance(locations, list) and locations:
-            lines.append(f"Location: {html_escape(locations[0])}<br/>")
-
-        type_ = characteristics.get("type")
-        if type_:
-            lines.append(f"Type: {html_escape(type_)}<br/>")
-
-        if lines:
-            items.append(f'<li class="cards__item">\n  ' + "\n  ".join(lines) + "\n</li>")
+        item_html = f"""
+        <li class="cards__item">
+            <div class="card__title">{name}</div>
+            <div class="card__text">
+                <ul class="card__list">
+                    <li><strong>Diet:</strong> {diet}</li>
+                    <li><strong>Location:</strong> {locations}</li>
+                    <li><strong>Type:</strong> {type_}</li>
+                </ul>
+            </div>
+        </li>
+        """
+        items.append(item_html)
 
     return "\n".join(items)
 
 
 def main():
-    # 1) Load data
-    animals = load_data(DATA_FILE)
+    animal_name = input("Enter a name of an animal: ").strip()
+    animals = fetch_animals(animal_name)
 
-    # 2) Build HTML list items
-    html_cards = build_animals_html(animals)
+    html_animals = build_animals_html(animals, animal_name)
 
-    # 3) Read template
-    template = TEMPLATE_FILE.read_text(encoding="utf-8")
+    with open(TEMPLATE_FILE, "r", encoding="utf-8") as f:
+        template = f.read()
 
-    # 4) Replace placeholder
-    html_out = template.replace("__REPLACE_ANIMALS_INFO__", html_cards)
+    html_out = template.replace("__REPLACE_ANIMALS_INFO__", html_animals)
 
-    # 5) Write final HTML
-    OUTPUT_FILE.write_text(html_out, encoding="utf-8")
-    print(f"✅ Generated {OUTPUT_FILE}. Open it in your browser to preview.")
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+        f.write(html_out)
+
+    print(f"✅ Website was successfully generated to the file {OUTPUT_FILE}")
 
 
 if __name__ == "__main__":
